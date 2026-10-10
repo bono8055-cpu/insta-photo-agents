@@ -28,5 +28,6 @@
 - [ ] 인사이트 수집·주간 리포트 (scripts/insights.py)
 - [x] 게시 엔진 insta_post.py + selftest.py (docs/insta-post-spec.md 4~6·9절, 표준 라이브러리 + Pillow) — 리뷰 P1 3·P2 8 반영, selftest 23/23, 결함 주입 3종 검출 확인
 - [x] 게시 화면 server.py + web/index.html (docs/insta-post-screen.md 0~4절) — 모의 서버로 6절 검증: 1장·3장 캐러셀 링크, 순서 변경 시 비율 재계산, 토큰 없음 빨강·버튼 막힘, 4회 클릭에 게시 1회
-- [ ] 저장소 공개 (docs/publish-checklist.md) — 개인정보 정리 + 단일 커밋 공개 + photo-hosting 브랜치 (정지: 공개·push 전 사용자 확인)
+- [x] 저장소 공개 (docs/publish-checklist.md) — 2026-10-10 github.com/bono8055-cpu/insta-photo-agents 공개, main 단일 커밋(noreply 작성자), photo-hosting 브랜치 생성, 실제 업로드→raw 200 image/jpeg→삭제 확인. 과거 기록은 로컬 private-history-backup(push 금지). insta-photo-hosting은 사용자가 삭제
+- [ ] scripts/publish.py는 삭제된 insta-photo-hosting을 기본값으로 가리킨다 — 실계정 첫 게시 후 위 정리 항목에서 함께 삭제
 - [ ] 새 엔진 실계정 첫 게시(1장 → 캐러셀) 후 정리: comments.py·publisher 에이전트를 insta_post로 옮기고 scripts/publish.py·test_publish.py 삭제 (정지: 삭제 전 사용자 확인)
