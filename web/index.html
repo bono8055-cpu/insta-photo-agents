@@ -1,0 +1,796 @@
+<!-- 인스타 게시 PC 화면: 사진 고르기·비율·캡션·게시 (server.py API 사용) -->
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>인스타 게시</title>
+<style>
+:root {
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --text: #1b1f24;
+  --muted: #566170;
+  --border: #d5dae1;
+  --accent: #2456c9;
+  --accent-text: #ffffff;
+  --ok: #1a7f37;
+  --bad: #c62828;
+  --warn-bg: #fff3cd;
+  --warn-text: #6b4a00;
+  --bad-bg: #fdecea;
+  --ok-bg: #e7f5ec;
+  --chip: #eceff3;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.55 -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+}
+.wrap { max-width: 880px; margin: 0 auto; padding: 20px 16px 48px; }
+header.top {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px;
+  margin-bottom: 16px;
+}
+h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+#status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 3px 11px; border-radius: 999px; font-size: 13.5px; font-weight: 600;
+  background: var(--chip); color: var(--muted);
+}
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.chip.ok { background: var(--ok-bg); color: var(--ok); }
+.chip.bad { background: var(--bad-bg); color: var(--bad); }
+.status-err { flex-basis: 100%; color: var(--bad); font-size: 14px; margin: 0; text-align: right; }
+
+section.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; margin-bottom: 14px;
+}
+h2 { font-size: 15px; margin: 0 0 10px; }
+
+button {
+  font: inherit; cursor: pointer; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 7px 14px; min-height: 36px;
+}
+button:hover:not(:disabled) { border-color: #9aa5b4; }
+button:disabled { cursor: not-allowed; opacity: 0.5; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+button.primary:hover:not(:disabled) { background: #1c47a8; border-color: #1c47a8; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+#drop { border: 2px dashed var(--border); border-radius: 10px; padding: 14px; transition: border-color .15s, background .15s; }
+#drop.dragging { border-color: var(--accent); background: #eef3fd; }
+.pick-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.hint { color: var(--muted); font-size: 14px; }
+#upload-state { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
+#upload-state:empty, #notice:empty { display: none; }
+#notice { margin: 8px 0 0; padding: 6px 10px; border-radius: 6px; font-size: 14px; background: var(--warn-bg); color: var(--warn-text); }
+#notice.bad { background: var(--bad-bg); color: var(--bad); }
+
+#thumbs { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 12px; }
+#thumbs:empty { display: none; }
+.thumb { min-width: 0; }
+.frame { position: relative; border-radius: 8px; overflow: hidden; background: #e4e8ee; border: 1px solid var(--border); }
+.frame img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.frame .num {
+  position: absolute; left: 6px; top: 6px; min-width: 22px; height: 22px; padding: 0 6px;
+  border-radius: 11px; background: rgba(27,31,36,.78); color: #fff; font-size: 12.5px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.frame .first {
+  position: absolute; right: 6px; top: 6px; padding: 0 8px; height: 22px; border-radius: 11px;
+  background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 700;
+  display: inline-flex; align-items: center;
+}
+.frame .busy {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.72); color: var(--text); font-weight: 600; font-size: 14px;
+}
+.ctrls { display: flex; gap: 6px; margin-top: 6px; }
+.ctrls button { flex: 1; padding: 0; min-height: 34px; font-weight: 600; }
+.meta { margin: 4px 0 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+
+.ratio-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 14px; }
+.ratio-row .label { font-weight: 600; margin-right: 2px; }
+.ratio-row button[data-ratio] { border-radius: 999px; padding: 4px 14px; min-height: 34px; }
+.ratio-row button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+#ratio-note { color: var(--muted); font-size: 14px; margin-left: 4px; }
+#ratio-note.bad { color: var(--bad); }
+
+label.cap-label { display: block; font-weight: 600; margin-bottom: 8px; }
+#caption {
+  display: block; width: 100%; min-height: 150px; resize: vertical;
+  font: inherit; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+}
+#caption:disabled { background: var(--bg); }
+.counters { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 8px; font-size: 14px; color: var(--muted); }
+.counters .over { color: var(--bad); font-weight: 700; }
+
+.publish-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px 14px; }
+#publish-hint { color: var(--muted); font-size: 14px; margin-right: auto; }
+#publish { min-width: 170px; min-height: 44px; font-size: 16px; }
+#new-post { min-height: 44px; }
+
+#result { margin-top: 14px; }
+#result:empty { display: none; }
+.line { margin: 0 0 6px; padding: 7px 11px; border-radius: 6px; font-size: 14.5px; overflow-wrap: anywhere; }
+.line.ok { background: var(--ok-bg); color: var(--ok); font-weight: 600; }
+.line.bad { background: var(--bad-bg); color: var(--bad); }
+.line.warn { background: var(--warn-bg); color: var(--warn-text); }
+.line a { color: inherit; }
+#result details { margin-top: 8px; font-size: 14px; }
+#result summary { cursor: pointer; color: var(--muted); }
+#result pre {
+  margin: 6px 0 0; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.5 Consolas, "Courier New", monospace;
+}
+
+dialog#confirm { border: 1px solid var(--border); border-radius: 12px; padding: 22px; max-width: min(420px, calc(100vw - 32px)); color: var(--text); background: var(--surface); }
+dialog#confirm::backdrop { background: rgba(20,24,30,.5); }
+dialog#confirm p { margin: 0 0 18px; font-size: 16px; font-weight: 600; }
+dialog#confirm .row { display: flex; justify-content: flex-end; gap: 8px; }
+
+@media (max-width: 520px) {
+  .wrap { padding: 14px 12px 40px; }
+  #status { margin-left: 0; }
+  .status-err { text-align: left; }
+  #publish, #new-post { flex: 1 1 100%; }
+  #thumbs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>인스타 게시</h1>
+    <div id="status" role="status" aria-live="polite"></div>
+  </header>
+
+  <section class="card" aria-labelledby="h-photo">
+    <h2 id="h-photo">사진</h2>
+    <div id="drop">
+      <div class="pick-row">
+        <button type="button" id="pick" class="primary">사진 고르기</button>
+        <span class="hint">또는 여기에 끌어다 놓기 (최대 10장, jpg·png·webp)</span>
+        <input type="file" id="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple hidden>
+      </div>
+      <p id="upload-state" aria-live="polite"></p>
+      <p id="notice" role="status" aria-live="polite"></p>
+      <ul id="thumbs" aria-label="게시할 사진 목록"></ul>
+    </div>
+    <div class="ratio-row" role="group" aria-label="비율">
+      <span class="label">비율</span>
+      <button type="button" data-ratio="auto" aria-pressed="true">자동</button>
+      <button type="button" data-ratio="4:5" aria-pressed="false">4:5</button>
+      <button type="button" data-ratio="1:1" aria-pressed="false">1:1</button>
+      <button type="button" data-ratio="1.91:1" aria-pressed="false">1.91:1</button>
+      <span id="ratio-note" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-cap">
+    <h2 id="h-cap" hidden>캡션</h2>
+    <label class="cap-label" for="caption">캡션</label>
+    <textarea id="caption" rows="6"></textarea>
+    <div class="counters">
+      <span id="count-chars">0 / 2200자</span>
+      <span id="count-tags">해시태그 0 / 30</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="publish-bar">
+      <span id="publish-hint"></span>
+      <button type="button" id="new-post" hidden>새 게시</button>
+      <button type="button" id="publish" class="primary" disabled>인스타에 게시</button>
+    </div>
+    <div id="result" aria-live="polite"></div>
+  </section>
+</div>
+
+<dialog id="confirm" aria-labelledby="confirm-text">
+  <p id="confirm-text"></p>
+  <div class="row">
+    <button type="button" id="confirm-cancel" autofocus>취소</button>
+    <button type="button" id="confirm-ok" class="primary">게시</button>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  'use strict';
+
+  var HDR = { 'X-Requested-With': 'insta-post' };
+  var MAX_PHOTOS = 10;
+  var MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+
+  var check = null;
+  var checking = false;
+  var job = null;
+  var jobPromise = null;
+  var photos = [];
+  var queue = [];
+  var uploading = false;
+  var ratio = 'auto';
+  var prep = null;
+  var prepUrls = [];
+  var prepAt = -1;
+  var prepSeq = 0;
+  var prepError = null;
+  var prepTimer = null;
+  var prepRunning = false;
+  var prepDirty = false;
+  var changeVer = 0;
+  var publishing = false;
+  var published = false;
+
+  function $(id) { return document.getElementById(id); }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function extOf(name) {
+    var p = String(name).split('.');
+    return p.length > 1 ? p.pop().toLowerCase() : '';
+  }
+
+  function isImage(f) {
+    return !!MIME[extOf(f.name)] || /^image\/(jpeg|png|webp)$/.test(f.type);
+  }
+
+  function fmtSize(b) {
+    if (b < 1024 * 1024) return Math.max(1, Math.round(b / 1024)) + 'KB';
+    return (b / 1024 / 1024).toFixed(1) + 'MB';
+  }
+
+  function limits() {
+    return {
+      chars: (check && check.maxCaption) || 2200,
+      tags: (check && check.maxHashtags) || 30
+    };
+  }
+
+  // ---------- 네트워크 ----------
+  function call(url, opts) {
+    opts = opts || {};
+    var headers = Object.assign({}, HDR, opts.headers || {});
+    return fetch(url, Object.assign({}, opts, { headers: headers })).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        return { ok: res.ok, status: res.status, data: data || {} };
+      });
+    }, function () {
+      throw new Error('서버에 연결하지 못했다');
+    });
+  }
+
+  function callOk(url, opts) {
+    return call(url, opts).then(function (r) {
+      if (!r.ok) throw new Error(r.data.error || ('요청에 실패했다 (' + r.status + ')'));
+      return r.data;
+    });
+  }
+
+  function postJson(url, body) {
+    return call(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  }
+
+  function fetchBlobUrl(url) {
+    return fetch(url, { headers: HDR }).then(function (res) {
+      if (!res.ok) throw new Error('미리보기를 불러오지 못했다');
+      return res.blob();
+    }, function () {
+      throw new Error('서버에 연결하지 못했다');
+    }).then(function (b) { return URL.createObjectURL(b); });
+  }
+
+  // ---------- 연결 상태 ----------
+  function runCheck() {
+    checking = true;
+    renderStatus();
+    renderPublish();
+    return call('/api/check').then(function (r) {
+      if (!r.ok) throw new Error(r.data.error || ('연결 확인에 실패했다 (' + r.status + ')'));
+      check = r.data;
+    }).catch(function (e) {
+      check = { ok: false, ready: false, error: e.message };
+    }).then(function () {
+      checking = false;
+      renderStatus();
+      renderCaption();
+      renderPublish();
+    });
+  }
+
+  function connectionOk() { return !!(check && check.ok && check.ready); }
+
+  function chip(kind, text) {
+    var s = el('span', 'chip ' + kind);
+    var d = el('span', 'dot');
+    d.setAttribute('aria-hidden', 'true');
+    s.appendChild(d);
+    s.appendChild(document.createTextNode(text));
+    return s;
+  }
+
+  function renderStatus() {
+    var box = $('status');
+    box.textContent = '';
+    if (checking) {
+      box.appendChild(chip('', '연결 확인 중'));
+    } else if (check) {
+      if (check.ok && check.username) box.appendChild(chip('ok', '@' + check.username));
+      if (check.push && check.public) box.appendChild(chip('ok', '호스팅 쓰기 가능'));
+      if (!connectionOk()) {
+        box.appendChild(chip('bad', '연결 실패'));
+      }
+    }
+    var again = el('button', null, '다시 확인');
+    again.type = 'button';
+    again.disabled = checking;
+    again.addEventListener('click', runCheck);
+    box.appendChild(again);
+    if (!checking && check && !connectionOk()) {
+      box.appendChild(el('p', 'status-err', check.error || '연결 상태를 확인하지 못했다'));
+    }
+  }
+
+  // ---------- 작업(job) ----------
+  function newJob() {
+    jobPromise = callOk('/api/job', { method: 'POST' }).then(function (d) {
+      job = d.job;
+      return job;
+    });
+    jobPromise.catch(function () { jobPromise = null; });
+    return jobPromise;
+  }
+
+  function ensureJob() {
+    if (job) return Promise.resolve(job);
+    return (jobPromise || newJob());
+  }
+
+  // ---------- 사진 올리기 ----------
+  function setNotice(text, bad) {
+    var n = $('notice');
+    n.textContent = text || '';
+    n.className = bad ? 'bad' : '';
+  }
+
+  function locked() { return publishing || published; }
+
+  function addFiles(list) {
+    if (locked()) return;
+    var all = Array.prototype.slice.call(list || []);
+    var imgs = all.filter(isImage);
+    var msgs = [];
+    if (imgs.length < all.length) msgs.push('jpg·png·webp만 받는다. 다른 형식은 뺐다.');
+    var room = MAX_PHOTOS - photos.length - queue.length - (uploading ? 1 : 0);
+    if (imgs.length > room) {
+      imgs = imgs.slice(0, Math.max(0, room));
+      msgs.push('최대 ' + MAX_PHOTOS + '장이라 앞 ' + MAX_PHOTOS + '장만 받았다.');
+    }
+    setNotice(msgs.join(' '), false);
+    if (!imgs.length) return;
+    imgs.forEach(function (f) { queue.push(f); });
+    renderUploadState();
+    renderPublish();
+    if (!uploading) pump();
+  }
+
+  function pump() {
+    uploading = true;
+    var step = function () {
+      var f = queue.shift();
+      if (!f) {
+        uploading = false;
+        renderUploadState();
+        renderAll();
+        return;
+      }
+      renderUploadState();
+      ensureJob().then(function (j) {
+        var type = f.type || MIME[extOf(f.name)] || 'application/octet-stream';
+        return callOk('/api/photo?job=' + encodeURIComponent(j) + '&name=' + encodeURIComponent(f.name), {
+          method: 'POST',
+          headers: { 'Content-Type': type },
+          body: f
+        });
+      }).then(function (d) {
+        photos.push({ i: d.i, w: d.w, h: d.h, name: f.name, url: URL.createObjectURL(f) });
+        schedulePrepare();
+      }).catch(function (e) {
+        setNotice(f.name + ': ' + e.message, true);
+      }).then(step);
+    };
+    step();
+  }
+
+  function renderUploadState() {
+    var left = queue.length + (uploading ? 1 : 0);
+    $('upload-state').textContent = left ? '올리는 중 (' + left + '장 남음)' : '';
+  }
+
+  // ---------- prepare ----------
+  function clearPrep() {
+    prepUrls.forEach(function (u) { URL.revokeObjectURL(u); });
+    prepUrls = [];
+    prep = null;
+  }
+
+  function prepOk() { return !!prep && prepAt === changeVer && !prepError; }
+
+  function schedulePrepare() {
+    changeVer++;
+    prepError = null;
+    clearTimeout(prepTimer);
+    if (!photos.length) {
+      clearPrep();
+    } else {
+      prepTimer = setTimeout(runPrepare, 300);
+    }
+    renderAll();
+  }
+
+  function runPrepare() {
+    if (prepRunning) { prepDirty = true; return; }
+    prepRunning = true;
+    var loop = function () {
+      prepDirty = false;
+      var ver = changeVer;
+      var order = photos.map(function (p) { return p.i; });
+      if (!order.length || !job) { prepRunning = false; return; }
+      var curJob = job;
+      postJson('/api/prepare', { job: curJob, order: order, ratio: ratio }).then(function (r) {
+        if (!r.ok) throw new Error(r.data.error || ('사진을 맞추지 못했다 (' + r.status + ')'));
+        var data = r.data;
+        if (!Array.isArray(data.items) || data.items.length !== order.length) {
+          throw new Error('서버 응답이 올바르지 않다');
+        }
+        var seq = ++prepSeq;
+        return Promise.allSettled(data.items.map(function (it) {
+          return fetchBlobUrl('/api/image?job=' + encodeURIComponent(curJob) + '&k=' + it.k + '&v=' + seq);
+        })).then(function (settled) {
+          var urls = settled.filter(function (s) { return s.status === 'fulfilled'; }).map(function (s) { return s.value; });
+          if (urls.length !== settled.length) {
+            // 일부만 받아졌으면 받은 것도 풀어 줘야 메모리가 새지 않는다
+            urls.forEach(function (u) { URL.revokeObjectURL(u); });
+            throw new Error('미리보기를 불러오지 못했다');
+          }
+          if (ver === changeVer) {
+            clearPrep();
+            prep = data;
+            prepUrls = urls;
+            prepAt = ver;
+            prepError = null;
+          } else {
+            urls.forEach(function (u) { URL.revokeObjectURL(u); });
+          }
+        });
+      }).catch(function (e) {
+        if (ver === changeVer) prepError = e.message;
+      }).then(function () {
+        renderAll();
+        if (prepDirty) loop(); else prepRunning = false;
+      });
+    };
+    loop();
+  }
+
+  // ---------- 썸네일·비율 ----------
+  function move(idx, delta) {
+    if (locked()) return;
+    var to = idx + delta;
+    if (to < 0 || to >= photos.length) return;
+    var t = photos[idx];
+    photos[idx] = photos[to];
+    photos[to] = t;
+    schedulePrepare();
+  }
+
+  function removeAt(idx) {
+    if (locked()) return;
+    var p = photos.splice(idx, 1)[0];
+    if (p) URL.revokeObjectURL(p.url);
+    schedulePrepare();
+  }
+
+  function renderThumbs() {
+    var box = $('thumbs');
+    var a = document.activeElement;
+    var focusI = null, focusAct = null;
+    if (a && box.contains(a) && a.dataset && a.dataset.act) {
+      focusI = a.dataset.i;
+      focusAct = a.dataset.act;
+    }
+    box.textContent = '';
+    var ok = prepOk();
+    var aspect = ok && prep.ratio ? prep.ratio : 0.8;
+    var lock = locked();
+    photos.forEach(function (p, idx) {
+      var item = ok ? prep.items[idx] : null;
+      var li = el('li', 'thumb');
+      var frame = el('div', 'frame');
+      frame.style.aspectRatio = String(aspect);
+      var img = el('img');
+      img.alt = '사진 ' + (idx + 1) + ' (' + p.name + ')';
+      img.src = ok && prepUrls[idx] ? prepUrls[idx] : p.url;
+      frame.appendChild(img);
+      frame.appendChild(el('span', 'num', String(idx + 1)));
+      if (idx === 0) frame.appendChild(el('span', 'first', '첫 장'));
+      if (!ok && !prepError) frame.appendChild(el('div', 'busy', '맞추는 중'));
+      li.appendChild(frame);
+
+      var ctrls = el('div', 'ctrls');
+      [['up', '<', '앞으로 옮기기', idx === 0], ['down', '>', '뒤로 옮기기', idx === photos.length - 1], ['del', 'x', '사진 빼기', false]]
+        .forEach(function (d) {
+          var b = el('button', null, d[1]);
+          b.type = 'button';
+          b.setAttribute('aria-label', '사진 ' + (idx + 1) + ' ' + d[2]);
+          b.dataset.act = d[0];
+          b.dataset.i = String(p.i);
+          b.disabled = lock || d[3];
+          b.addEventListener('click', function () {
+            var cur = photos.indexOf(p);
+            if (cur < 0) return;
+            if (d[0] === 'up') move(cur, -1);
+            else if (d[0] === 'down') move(cur, 1);
+            else removeAt(cur);
+          });
+          ctrls.appendChild(b);
+        });
+      li.appendChild(ctrls);
+
+      var meta = item ? (item.w + 'x' + item.h + ' ' + fmtSize(item.bytes)) : (p.w + 'x' + p.h + ' 원본');
+      li.appendChild(el('p', 'meta', meta));
+      box.appendChild(li);
+    });
+
+    if (focusI !== null) {
+      var cands = box.querySelectorAll('button[data-i="' + focusI + '"]');
+      var target = null;
+      Array.prototype.forEach.call(cands, function (b) {
+        if (!b.disabled && !target) target = b;
+        if (!b.disabled && b.dataset.act === focusAct) target = b;
+      });
+      if (!target) target = box.querySelector('button:not(:disabled)');
+      if (target) target.focus();
+    }
+  }
+
+  function renderRatio() {
+    Array.prototype.forEach.call(document.querySelectorAll('button[data-ratio]'), function (b) {
+      b.setAttribute('aria-pressed', b.dataset.ratio === ratio ? 'true' : 'false');
+      b.disabled = locked();
+    });
+    var note = $('ratio-note');
+    note.className = '';
+    if (!photos.length) { note.textContent = ''; return; }
+    if (prepError) {
+      note.className = 'bad';
+      note.textContent = prepError;
+      return;
+    }
+    if (!prepOk()) { note.textContent = '맞추는 중'; return; }
+    var parts = [];
+    if (ratio === 'auto') parts.push('자동 -> ' + prep.ratioLabel);
+    var first = prep.items[0];
+    if (first && first.cropAxis && Math.round(first.cropPct) > 0) {
+      parts.push(first.cropAxis + ' ' + Math.round(first.cropPct) + '% 잘림');
+    }
+    note.textContent = parts.join(', ');
+  }
+
+  // ---------- 캡션 ----------
+  function counts() {
+    var text = $('caption').value;
+    var tags = text.split(/\s+/).filter(function (t) { return t.charAt(0) === '#' && t.length > 1; }).length;
+    return { chars: Array.from(text).length, tags: tags };
+  }
+
+  function captionOk() {
+    var c = counts(), l = limits();
+    return c.chars <= l.chars && c.tags <= l.tags;
+  }
+
+  function renderCaption() {
+    var c = counts(), l = limits();
+    var a = $('count-chars'), b = $('count-tags');
+    a.textContent = c.chars + ' / ' + l.chars + '자';
+    b.textContent = '해시태그 ' + c.tags + ' / ' + l.tags;
+    a.className = c.chars > l.chars ? 'over' : '';
+    b.className = c.tags > l.tags ? 'over' : '';
+    $('caption').disabled = locked();
+    renderPublish();
+  }
+
+  // ---------- 게시 ----------
+  function publishBlocker() {
+    if (!connectionOk()) return checking ? '연결을 확인하는 중이다' : '연결 상태를 확인해야 한다';
+    if (!photos.length) return queue.length || uploading ? '사진을 올리는 중이다' : '사진을 한 장 이상 고른다';
+    if (uploading || queue.length) return '사진을 올리는 중이다';
+    if (prepError) return '사진을 맞추지 못했다';
+    if (!prepOk()) return '사진을 맞추는 중이다';
+    if (!captionOk()) return '캡션이 한도를 넘었다';
+    return '';
+  }
+
+  function renderPublish() {
+    var btn = $('publish'), hint = $('publish-hint');
+    if (published) {
+      btn.textContent = '게시 완료';
+      btn.disabled = true;
+      hint.textContent = '';
+      $('new-post').hidden = false;
+      return;
+    }
+    $('new-post').hidden = true;
+    if (publishing) {
+      btn.textContent = '게시 중 (최대 2분)';
+      btn.disabled = true;
+      hint.textContent = '';
+      return;
+    }
+    btn.textContent = '인스타에 게시';
+    var why = publishBlocker();
+    btn.disabled = !!why;
+    hint.textContent = why;
+  }
+
+  function renderAll() {
+    renderThumbs();
+    renderRatio();
+    renderCaption();
+    renderUploadState();
+    renderPublish();
+    $('pick').disabled = locked();
+  }
+
+  function openConfirm() {
+    if (publishing || published || publishBlocker()) return;
+    $('confirm-text').textContent = '사진 ' + photos.length + '장을 @' + (check.username || '') + '에 실제로 게시한다. 되돌릴 수 없다.';
+    $('confirm-ok').disabled = false;
+    var d = $('confirm');
+    if (typeof d.showModal === 'function') d.showModal();
+    else d.setAttribute('open', '');
+  }
+
+  function closeConfirm() {
+    var d = $('confirm');
+    if (typeof d.close === 'function') d.close();
+    else d.removeAttribute('open');
+  }
+
+  function resultLine(kind, text) {
+    return el('p', 'line ' + kind, text);
+  }
+
+  function logDetails(log) {
+    if (!Array.isArray(log) || !log.length) return null;
+    var d = el('details');
+    d.appendChild(el('summary', null, '단계 기록 (' + log.length + '줄)'));
+    d.appendChild(el('pre', null, log.join('\n')));
+    return d;
+  }
+
+  function startPublish() {
+    if (publishing || published || publishBlocker()) return;
+    publishing = true;
+    var res = $('result');
+    res.textContent = '';
+    renderAll();
+    postJson('/api/publish', { job: job, caption: $('caption').value }).then(function (r) {
+      var d = r.data;
+      if (r.ok) {
+        published = true;
+        var line = el('p', 'line ok');
+        line.appendChild(document.createTextNode('게시했다. '));
+        if (d.permalink && /^https?:\/\//i.test(d.permalink)) {
+          var a = el('a', null, d.permalink);
+          a.href = d.permalink;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          line.appendChild(a);
+        } else {
+          line.appendChild(document.createTextNode('게시물 링크는 받지 못했다.'));
+        }
+        res.appendChild(line);
+        (d.warnings || []).forEach(function (w) { res.appendChild(resultLine('warn', String(w))); });
+      } else {
+        var msg = (d.step ? d.step + ': ' : '') + (d.error || ('게시에 실패했다 (' + r.status + ')'));
+        res.appendChild(resultLine('bad', msg));
+      }
+      var det = logDetails(d.log);
+      if (det) res.appendChild(det);
+    }).catch(function (e) {
+      res.appendChild(resultLine('bad', e.message + '. 이미 게시됐을 수 있으니 인스타에서 확인한 뒤 다시 시도한다.'));
+    }).then(function () {
+      publishing = false;
+      renderAll();
+      if (published) $('new-post').focus();
+    });
+  }
+
+  function resetPost() {
+    photos.forEach(function (p) { URL.revokeObjectURL(p.url); });
+    photos = [];
+    queue = [];
+    clearPrep();
+    prepError = null;
+    published = false;
+    publishing = false;
+    job = null;
+    jobPromise = null;
+    $('caption').value = '';
+    $('result').textContent = '';
+    setNotice('');
+    changeVer++;
+    clearTimeout(prepTimer);
+    newJob().catch(function (e) { setNotice('새 작업을 만들지 못했다: ' + e.message, true); });
+    renderAll();
+  }
+
+  // ---------- 이벤트 ----------
+  $('pick').addEventListener('click', function () { if (!locked()) $('file').click(); });
+  $('file').addEventListener('change', function (e) {
+    addFiles(e.target.files);
+    e.target.value = '';
+  });
+
+  var drop = $('drop');
+  drop.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    if (!locked()) drop.classList.add('dragging');
+  });
+  drop.addEventListener('dragleave', function (e) {
+    if (!e.relatedTarget || !drop.contains(e.relatedTarget)) drop.classList.remove('dragging');
+  });
+  drop.addEventListener('drop', function (e) {
+    e.preventDefault();
+    drop.classList.remove('dragging');
+    if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+  });
+  window.addEventListener('dragover', function (e) { e.preventDefault(); });
+  window.addEventListener('drop', function (e) { e.preventDefault(); });
+
+  Array.prototype.forEach.call(document.querySelectorAll('button[data-ratio]'), function (b) {
+    b.addEventListener('click', function () {
+      if (locked() || ratio === b.dataset.ratio) return;
+      ratio = b.dataset.ratio;
+      schedulePrepare();
+    });
+  });
+
+  $('caption').addEventListener('input', renderCaption);
+  $('publish').addEventListener('click', openConfirm);
+  $('confirm-cancel').addEventListener('click', closeConfirm);
+  $('confirm-ok').addEventListener('click', function () {
+    if (publishing || published) return;
+    this.disabled = true;
+    closeConfirm();
+    startPublish();
+  });
+  $('new-post').addEventListener('click', resetPost);
+
+  renderAll();
+  renderStatus();
+  runCheck();
+  newJob().catch(function (e) { setNotice('작업을 만들지 못했다: ' + e.message, true); });
+})();
+</script>
+</body>
+</html>

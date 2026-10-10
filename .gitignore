@@ -1,0 +1,10 @@
+.env
+photos/**
+!photos/**/
+!photos/**/.gitkeep
+__pycache__/
+content/comment-log.jsonl
+.insta_post_state/
+work/
+**/.omc/
+.claude/settings.local.json

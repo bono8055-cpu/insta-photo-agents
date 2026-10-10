@@ -1,0 +1,37 @@
+{
+  "id": "20261001-museum-san",
+  "format": "carousel",
+  "series": "museum-san",
+  "tone": "calm-neutral",
+  "photos": [
+    "photos/export/museum-san_07.jpg",
+    "photos/export/museum-san_02.jpg",
+    "photos/export/museum-san_06.jpg",
+    "photos/export/museum-san_03.jpg",
+    "photos/export/museum-san_05.jpg",
+    "photos/export/museum-san_08.jpg",
+    "photos/export/museum-san_01.jpg",
+    "photos/export/museum-san_09.jpg"
+  ],
+  "theme": "콘크리트와 물 사이를 걷는 시간",
+  "caption_options": [
+    "뮤지엄산에서\n📍원주 뮤지엄산 · GR",
+    "원주 뮤지엄산 산책\n📍원주 · GR",
+    "콘크리트와 물, 뮤지엄산\n📍원주 · GR"
+  ],
+  "caption": "뮤지엄산에서\n📍원주 뮤지엄산 · GR",
+  "hashtags": [
+    "#뮤지엄산",
+    "#안도다다오",
+    "#museumsan",
+    "#ricohgr"
+  ],
+  "scheduled_at": "2026-10-01T08:00:00+09:00",
+  "status": "draft",
+  "notes": [
+    "촬영 날짜를 모른다(붙여 준 이미지에 EXIF 없음). 계절감 표현은 넣지 않았다.",
+    "03에 오른쪽 끝 관람객이 작게 나온다. 얼굴은 식별되지 않는다.",
+    "을지로와 같은 방식으로 영문 해시태그 #museumsan, #ricohgr를 넣었다. 해외 건축 사진 수요가 있어서다. 캡션은 한국어만 썼다 — 영어 줄이 필요하면 추가한다.",
+    "캡션은 사용자 피드백(2026-10-05)으로 담백한 사실 한 줄로 교체 — 이전 감성 문장 폐기."
+  ]
+}

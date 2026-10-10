@@ -1,0 +1,41 @@
+{
+  "id": "20260929-jongno-walk",
+  "format": "carousel",
+  "series": "20260725-jongno-walk",
+  "tone": "user-edited",
+  "photos": [
+    "photos/export/jongno_07.jpg",
+    "photos/export/jongno_05.jpg",
+    "photos/export/jongno_06.jpg",
+    "photos/export/jongno_02.jpg",
+    "photos/export/jongno_01.jpg",
+    "photos/export/jongno_09.jpg",
+    "photos/export/jongno_04.jpg",
+    "photos/export/jongno_03.jpg",
+    "photos/export/jongno_08.jpg"
+  ],
+  "theme": "한글 간판이 빼곡한 종로 골목의 여름 한낮",
+  "caption_options": [
+    "종로 골목 산책\nA walk around Jongno, Seoul\n📍종로 Jongno · GR",
+    "7월, 종로\nJongno, Seoul. July.\n📍종로 Jongno · GR",
+    "여름의 종로\nJongno in summer\n📍종로 Jongno · GR"
+  ],
+  "caption": "종로 골목 산책\nA walk around Jongno, Seoul\n📍종로 Jongno · GR",
+  "hashtags": [
+    "#종로",
+    "#jongno",
+    "#seoulstreets",
+    "#골목산책",
+    "#ricohgr"
+  ],
+  "scheduled_at": "2026-09-29T19:00:00+09:00",
+  "status": "draft",
+  "notes": [
+    "첫 장은 사용자 결정으로 jongno_07(할매국수 골목) — 한글 간판이 빼곡해 한국 골목을 가장 잘 보여준다. 2장째(재노출 자리)는 색채감 1위 토마토.",
+    "7번째 사진(jongno_04, 길에서 자는 사람) — 얼굴 비노출, 초상권·존엄 우려를 알린 뒤 사용자가 포함 결정(9장 유지).",
+    "6번째 사진(jongno_09, 작업자)은 얼굴 아래쪽이 화면 위 끝에 걸린다.",
+    "을지로 초안(20260929-euljiro-walk)을 대체했다 — 위치가 종로로 확인됨.",
+    "톤: 사용자가 이미 보정한 사진이라 warm-film 거절, 보낸 색 그대로 사용. 06만 키스톤 2.4° 보정 승인본.",
+    "캡션은 사용자 피드백(2026-10-05)으로 담백한 사실 한 줄로 교체 — 이전 감성 문장 폐기."
+  ]
+}

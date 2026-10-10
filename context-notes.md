@@ -1,0 +1,20 @@
+# context-notes
+
+- 2026-09-27: 게시 방식은 Graph API 예약 자동 게시로 결정(사용자 선택). 단 비공식 API·행동 자동화는 제외 — 약관 위반·계정 정지 위험.
+- 2026-09-27: 승인 게이트를 파일 이동(drafts→approved)으로 설계. 별도 UI 없이 사람이 검토 상태를 명확히 통제할 수 있어서.
+- 2026-09-27: 체크리스트는 PLAN.md 하나로 관리(checklist.md 중복 생성 안 함).
+- 2026-09-27: 내보내기 비율은 API 범위(4:5~1.91:1) 안이면 유지, 밖일 때만 중앙 크롭 — 가로 사진을 4:5로 강제 크롭하면 구도가 망가져서. 캐러셀 동일 비율 검사는 publisher 몫.
+- 2026-09-27: 사진 원본은 photos/ 아래 두되 git에서 제외 — 개인 사진이 원격 저장소에 올라가는 것을 막기 위해.
+- 2026-09-27: 톤은 시리즈별 프리셋(warm-film 도시 산책 / calm-neutral 건축·전시) — 사용자 선택. 한 캐러셀 안에서는 섞지 않는다.
+- 2026-09-27: calm-neutral 캐스트 추정은 전체 평균(gray-world 50%, 게인 ±10%). 무채색 픽셀이 적고 녹음만 가득한 사진에서는 오판 가능 — 그런 사례가 나오면 무채색 픽셀 기반 추정으로 바꾼다.
+- 2026-09-27: 톤 처리는 긴 변 2400px로 축소 후 float32 — GR 원본 float64 처리 시 GB 단위 메모리.
+- 2026-09-27: 사용자가 이미 보정해서 보낸 사진에 warm-film을 겹치면 하늘이 누렇고 탁해짐(종로 01·08) → 톤 프리셋은 무보정 원본(GR JPG)에만 쓰고, 보정본은 톤 단계 거절로 그대로 쓴다.
+- 2026-09-27: 캐러셀 첫 장은 4:5 썸네일 색채감(Hasler-Süsstrunk) 상위 컷을 후보로 두고 육안으로 확정 — 종로는 토마토(121) > CD 네온(49).
+- 2026-10-05: 폰 운영은 Remote Control(사용자 선택). 클라우드 세션은 git 추적 파일만 받는데 photos/는 전부 제외(22GB)이고, 기본 네트워크(Trusted)가 graph.instagram.com을 막는다.
+- 2026-10-05: 이미지는 2026-10 현재도 image_url(공개 URL) 방식만 가능 — resumable 업로드는 동영상·Facebook Login 전용. 호스팅은 GitHub 공개 저장소 bono8055-cpu/insta-photo-hosting에 올렸다 게시 후 삭제(사용자 선택). R2보다 계정·키 추가가 없어서. 파일명은 ASCII 타임스탬프 — 비ASCII URL은 실패한다는 문서 경고.
+- 2026-10-05: Graph API는 Instagram Login(graph.instagram.com) v25.0 고정 — IG 문서 예제 기준, v26은 graph.instagram.com 지원이 문서화 안 됨. 토큰은 Authorization: Bearer 헤더로 보내 URL·로그에 남지 않게 했다.
+- 2026-10-05: 댓글 자동 답글은 승인 없이 즉시(사용자 결정). 웹훅은 Live 모드 + Advanced Access + Business Verification이 필요해 개인 계정엔 불가 → 5분 주기 폴링(작업 스케줄러, 노트북이라 배터리 허용 설정 필요해 schtasks 대신 Register-ScheduledTask). 답글 문장은 Claude CLI(구독 사용량, 사용자 선택) — `--bare`는 OAuth를 안 써서 불가, 대신 --tools "" + --setting-sources local + 빈 cwd. claude.cmd 경유라 댓글 원문은 stdin으로만(BatBadBut). 사기·민감 댓글은 규칙→Claude→답글 필터 3단계로 막고 애매하면 답하지 않는다(사용자 요구). 답글은 해라체가 아닌 해요체 — 캡션 문체(해라체)를 사람에게 쓰면 반말이 돼서.
+- 2026-10-05: 보안 리뷰 반영 — TMPDIR(ESTsoft)가 Everyone 쓰기 폴더라 CLI 작업 폴더는 %LOCALAPPDATA%\insta-comment-reply, 자식 환경에서 IG_* 제거, claude.exe 직접 실행(cmd.exe 제거). 출력은 `R:` 접두어만 인정, 댓글 문구 6자 이상 반복 차단. 잔여 위험: 바꿔 말하게 하는 의미 기반 주입은 Haiku 판단에 의존 — 고정 문구 방식은 캡션 질문 답변을 잃어서 채택 안 함. CLI 오류는 재시도(게시 전), 게시 단계 오류는 종결(중복 방지).
+- 2026-10-05: 계정 구조 — 게시 대상은 사진 계정(인스타, 프로페셔널 전환 완료, 개인 이메일로 가입). 같은 계정 센터에 Facebook 계정과 다른 인스타·스레드 계정이 있다. 개발자 등록은 Facebook 계정만 가능해 그 계정으로 하되 게시는 토큰 발급 시 사진 계정으로 로그인해 연결. Facebook 계정에는 이메일이 없고 휴대폰만 인증됨 → 등록 화면의 이메일 추가가 전부 거부된 원인 후보. 무료(개발자 등록) 경로로 가기로 사용자 결정 — 유료 파트너 API는 보류.
+- 2026-10-10: 게시 엔진을 insta_post.py(표준 라이브러리 + Pillow, 폰 앱 Chaquopy 이식용)로 새로 만들고 publish.py는 실계정 검증 후 정리. 호스팅은 이 저장소를 공개해 photo-hosting 전용 브랜치에 올렸다 지운다(사용자 결정 — insta-photo-hosting은 검증 후 삭제 예정). 공개 전 git 기록의 개인정보(작성자 이메일·계정 메모) 정리 필요 — docs/publish-checklist.md. 화면은 server.py(127.0.0.1, Host·X-Requested-With 검사) + web/index.html.
+- 2026-10-05: 예약 게시 스케줄러는 만들지 않음 — 게시는 채팅 승인 후 수동 실행이 원칙이고 Graph API에도 예약 필드가 없다. 게시 기록은 approved JSON의 media_id로 남기고(중복 방지), content/scheduled·photos/posted 이동은 하지 않는다(export는 재생성되는 파일).
